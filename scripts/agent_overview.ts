@@ -27,17 +27,27 @@ async function main() {
   const table = []
   for (const agent of agents) {
     const agent_contract = new ContractPromise(api, nomination_agent_data.abi, agent.address)
+
     const poolMember = poolMembersResult.find(r => r[0].toHuman()[0] === agent.address)
     const poolId = poolMember?.[1]?.toJSON()?.["poolId"]
 
-    const stakedValue = await contractQueryAndDecode(api, agent_contract, 'iNominationAgent::getStakedValue')
-    const unbondingValue = await contractQueryAndDecode(api, agent_contract, 'iNominationAgent::getUnbondingValue')
+    const bondedPool = await api.query.nominationPools.bondedPools(poolId)
+    const points = BigInt(bondedPool.toJSON()['points'].toString().replace(/,/g, ''))
+
+    const stakedValueRaw = await contractQueryAndDecode(api, agent_contract, 'iNominationAgent::getStakedValue')
+    const stakedValue = BigInt(stakedValueRaw.replace(/,/g, ''))
+    const unbondingValueRaw = await contractQueryAndDecode(api, agent_contract, 'iNominationAgent::getUnbondingValue')
+    const unbondingValue = BigInt(unbondingValueRaw.replace(/,/g, ''))
+
+    const pointsDelta = points - stakedValue
 
     table.push({
       agent: agent.address,
-      weight: agent.weight,
-      init: agent.initialized,
+      // weight: agent.weight,
+      // init: agent.initialized,
       pid: poolId,
+      points,
+      pointsDelta,
       stakedValue,
       unbondingValue,
     })
